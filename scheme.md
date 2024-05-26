@@ -13,6 +13,7 @@ This table will store information about the users of the application.
 | date_joined      | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP |
 | sex              | ENUM('Male', 'Female', 'Other') | NOT NULL |
 | date_of_birth    | DATE         | NULL                    |
+| account          | INT          | NOT NULL                |
 
 #### Product Table
 This table will store information about the products.
