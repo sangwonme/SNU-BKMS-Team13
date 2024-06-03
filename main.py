@@ -100,23 +100,64 @@ class BE:
     def search(self): # split search and filter? or merge?
         raise NotImplementedError() # TODO: sangwon
 
-    def brand_info(self):
-        raise NotImplementedError() # TODO: minchan
+    def brand_info(self, seller_id):
+        cursor.execute("""
+            SELECT * FROM sellers WHERE seller_id = %s""", (seller_id,))
+        result = cursor.fetchone()
+        conn.commit()
+        if not result:
+            raise NotFoundError()
+        return {
+            "seller_id": result[0],
+            "seller_name": result[1],
+            "contact_email": result[2],
+            "contact_phone": result[3],
+            "address": result[4],
+            "date_joined": result[5]
+        } # TODO: minchan
 
     def purchase(self):
         raise NotImplementedError() # TODO: hobin
 
-    def product_info(self):
-        raise NotImplementedError() # TODO: minchan
+    def product_info(self, product_id):
+        cursor.execute("""
+            SELECT * FROM products WHERE product_id = %s""", (product_id,))
+        result = cursor.fetchone()
+        conn.commit()
+        if not result:
+            raise NotFoundError()
+        return {
+            "product_id": result[0],
+            "goods_name": result[1],
+            "goods_link": result[2],
+            "image_link": result[3],
+            "sex": result[4],
+            "category": result[5],
+            "price": result[6],
+            "seller_id": result[7],
+            "stock_quantity": result[8],
+            "date_added": result[9]
+        } # TODO: minchan
 
-    def register_product(self):
-        raise NotImplementedError() # TODO: minchan
+    def register_product(self, goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity):
+        cursor.execute("""
+            INSERT INTO products (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING product_id""", (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity))
+        conn.commit()
+        return cursor.fetchone()[0] # TODO: minchan
 
-    def update_product(self):
-        raise NotImplementedError() # TODO: minchan
+    def update_product(self, product_id, goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity):
+        cursor.execute("""
+            UPDATE products
+            SET goods_name = %s, goods_link = %s, image_link = %s, sex = %s, category = %s, price = %s, seller_id = %s, stock_quantity = %s
+            WHERE product_id = %s""", (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity, product_id))
+        conn.commit() # TODO: minchan
 
-    def delete_product(self):
-        raise NotImplementedError() # TODO: minchan
+    def delete_product(self, product_id):
+        cursor.execute("""
+            DELETE FROM products WHERE product_id = %s""", (product_id,))
+        conn.commit() # TODO: minchan
 
     def get_purchase_history(self):
         raise NotImplementedError() # TODO: dookyung
@@ -235,11 +276,37 @@ class FE:
 
     @protected
     def product_info(self):
-        raise NotImplementedError() # TODO: minchan
+        product_id = int(input("Enter the product ID: "))
+        try:
+            product = backend.product_info(product_id)
+            print(f"Product ID: {product['product_id']}")
+            print(f"Product Name: {product['goods_name']}")
+            print(f"Product Link: {product['goods_link']}")
+            print(f"Image Link: {product['image_link']}")
+            print(f"Sex: {product['sex']}")
+            print(f"Category: {product['category']}")
+            print(f"Price: {product['price']}")
+            print(f"Seller ID: {product['seller_id']}")
+            print(f"Stock Quantity: {product['stock_quantity']}")
+            print(f"Date Added: {product['date_added']}")
+        except NotFoundError:
+            print("Product not found.")
+        self.push("home") # TODO: minchan
 
     @protected
     def brand_info(self):
-        raise NotImplementedError() # TODO: minchan
+        seller_id = int(input("Enter the seller ID: "))
+        try:
+            seller = backend.brand_info(seller_id)
+            print(f"Seller ID: {seller['seller_id']}")
+            print(f"Seller Name: {seller['seller_name']}")
+            print(f"Contact Email: {seller['contact_email']}")
+            print(f"Contact Phone: {seller['contact_phone']}")
+            print(f"Address: {seller['address']}")
+            print(f"Date Joined: {seller['date_joined']}")
+        except NotFoundError:
+            print("Sellor not found.")
+        self.push("home") # TODO: minchan
 
     @protected
     def purchase(self):
@@ -248,7 +315,27 @@ class FE:
 
     @protected
     def register_product(self):
-        raise NotImplementedError() # TODO: minchan
+        goods_name = input("Enter the product name: ")
+        goods_link = input("Enter the product link: ")
+        image_link = input("Enter the image link: ")
+        sex = get_choice("Male", "Female", "Unisex", msg="Enter the sex: ", get_label=True)
+        category = input("Enter the category: ")
+        price = float(input("Enter the price: "))
+        seller_id = int(input("Enter the seller ID: "))
+        stock_quantity = int(input("Enter the stock quantity: "))
+        product_id = backend.register_product(goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity)
+        print(f"New product registered with ID: {product_id}")
+        self.push("home") # TODO: minchan
+    
+    @protected
+    def delete_product(self):
+        product_id = int(input("Enter the product ID to delete: "))
+        try:
+            backend.delete_product(product_id)
+            print("Product deleted successfully.")
+        except NotFoundError:
+            print("Product not found.")
+        self.push("home") # ADD: minchan
 
     @protected
     def mypage(self):
