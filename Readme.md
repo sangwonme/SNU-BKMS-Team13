@@ -64,9 +64,9 @@ CREATE TABLE buylog (
 
 # Prequisites
 
-1. `python-dotenv`, `psycopg2-binary` 라이브러리 설치
+1. `python-dotenv`, `psycopg2-binary`, `pandas`, `numpy`, `fashion-clip` 라이브러리 설치
 ```
-pip install python-dotenv psycopg2-binary
+pip install python-dotenv psycopg2-binary pandas numpy fashion-clip
 ```
 2. 루트폴더 (../SNU-BKMS-TEAM13) 에 `.env` 이름의 텍스트파일 생성 후, postgre DB 정보 입력
 - 아래 예시 복붙하신 후, 일반적으로 USERNAME, DBNAME만 바꾸면 됩니다
