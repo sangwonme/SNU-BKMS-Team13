@@ -68,7 +68,9 @@ CREATE TABLE buylog (
 ```
 pip install python-dotenv psycopg2-binary pandas numpy fashion-clip
 ```
-2. 루트폴더 (../SNU-BKMS-TEAM13) 에 `.env` 이름의 텍스트파일 생성 후, postgre DB 정보 입력
+2. (`itemDB.csv`)[https://drive.google.com/file/d/14zRKiRThvreP6502w6pl2XUXBywJsRV9/view?usp=sharing] 다운 받아서 `./data/itemDB.csv`에 파일 두기
+
+3. 루트폴더 (../SNU-BKMS-TEAM13) 에 `.env` 이름의 텍스트파일 생성 후, postgre DB 정보 입력
 - 아래 예시 복붙하신 후, 일반적으로 USERNAME, DBNAME만 바꾸면 됩니다
 ```
 PG_DBNAME=postgres
@@ -77,8 +79,7 @@ PG_PASSWORD=1234
 PG_PORT=5432
 PG_HOST=localhost
 ```
-
-3. 실행:
+4. 실행:
 `python3 main.py`
 
 # Notes
