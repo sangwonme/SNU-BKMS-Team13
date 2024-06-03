@@ -1,8 +1,11 @@
 import os
 import traceback
 import psycopg2
+import pandas as pd
+import numpy as np
 from psycopg2 import sql
 from dotenv import load_dotenv
+from fashion_clip.fashion_clip import FashionCLIP
 
 #--------------------- CONSTANTS --------------------------#
 
@@ -31,7 +34,16 @@ cursor = conn.cursor()
 class NotFoundError(Exception):
     pass
 
+# --------------------- RAW DATA --------------------------#
+# load raw data
+raw_df = pd.read_csv('./data/itemDB.csv')
+# convert str formatted vector -> np.array
+raw_df['vector'] = raw_df['vector'].apply(lambda x: np.array(list(map(float, x.replace('[', '').replace(']','').replace(' ','').split(',')))))
+
+
 # --------------------- UTILS -----------------------------#
+# load fashion-clip model
+fclip = FashionCLIP('fashion-clip')
 
 def get_choice(*args, msg="", get_label=False):
     print(f"{msg if msg else 'Please choose an option'}")
