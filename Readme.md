@@ -1,19 +1,65 @@
 # DB Initialization
 
+> Create DB with following commands
 ```postgresql
-/* users */
+-- Create ENUM types for sex in User and Product tables
+CREATE TYPE sex_type AS ENUM ('Male', 'Female', 'Other');
+CREATE TYPE product_sex_type AS ENUM ('Male', 'Female', 'Unisex');
+
+-- Create the Users table
 CREATE TABLE users (
-    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    date_joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sex ENUM('Male', 'Female', 'Other') NOT NULL,
-    date_of_birth DATE NULL,
-    account INT NOT NULL,
+    sex sex_type NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    date_of_birth DATE
 );
 
-/* TODO: sangwon */
+-- Create the Seller table
+CREATE TABLE seller (
+    seller_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    seller_name VARCHAR(100) NOT NULL,
+    contact_email VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Create the Product table
+CREATE TABLE product (
+    product_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    goods_name VARCHAR(255) NOT NULL,
+    image_link VARCHAR(255) NOT NULL,
+    sex product_sex_type NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    seller_id INT NOT NULL REFERENCES seller(seller_id),
+    stock_quantity INT NOT NULL,
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create the SearchLog table
+CREATE TABLE searchlog (
+    searchlog_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(user_id),
+    search_query VARCHAR(255) NOT NULL,
+    search_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create the SearchResult table
+CREATE TABLE searchresult (
+    result_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    searchlog_id INT NOT NULL REFERENCES searchlog(searchlog_id),
+    product_id INT NOT NULL REFERENCES product(product_id),
+    rank INT NOT NULL
+);
+
+-- Create the BuyLog table
+CREATE TABLE buylog (
+    buylog_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(user_id),
+    product_id INT NOT NULL REFERENCES product(product_id),
+    quantity INT NOT NULL,
+    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 # Prequisites
