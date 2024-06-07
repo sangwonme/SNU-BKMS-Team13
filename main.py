@@ -7,7 +7,6 @@ import numpy as np
 from psycopg2 import sql
 from dotenv import load_dotenv
 from fashion_clip.fashion_clip import FashionCLIP
-from test_fashionclip import indecies
 
 #--------------------- CONSTANTS --------------------------#
 
@@ -54,8 +53,6 @@ print("FashionCLIP Loading...")
 fclip = FashionCLIP('fashion-clip')
 print("FashionCLIP Loaded!", f"({round(time.time()-start_time, 2)}s.)")
 
-
-
 def get_choice(*args, msg="", get_label=False):
     print(f"{msg if msg else 'Please choose an option'}")
     for i, arg in enumerate(args):
@@ -81,11 +78,10 @@ class BE:
         return {
             "user_id": result[0],
             "username": result[1],
-            "email": result[2],
-            "date_joined": result[4],
-            "sex": result[5],
-            "date_of_birth": result[6],
-            "account": result[7]
+            "email": result[4],
+            "sex": result[3],
+            "date_of_birth": result[5],
+            "account": result[6]
         }
 
     def sign_in(self, username, password):
@@ -98,11 +94,10 @@ class BE:
         return {
             "user_id": result[0],
             "username": result[1],
-            "email": result[2],
-            "date_joined": result[4],
-            "sex": result[5],
-            "date_of_birth": result[6],
-            "account": result[7]
+            "email": result[4],
+            "sex": result[3],
+            "date_of_birth": result[5],
+            "account": result[6]
         }
 
     def sign_up(self, username, email, password, sex, birthday):
@@ -130,15 +125,66 @@ class BE:
         dot_product_single = np.dot(image_embeddings, text_embeddings.T)
         # get top_k
         indecies = np.flip(dot_product_single.argsort(0)[-top_k:]).flatten().tolist()
-        # update searchlog
+        # TODO: update searchlog
+
         return raw_df.loc['goods_name', indecies]
 
-    def search_filter(self, filter_attr, filter_value): # split search and filter? or merge?
-        # TODO: Find w/ filter
-
-        # TODO: update searchlog
-        pass
-
+    def search_sex(self, sex): # split search and filter? or merge?
+        cursor.execute("""
+            SELECT * FROM product WHERE sex = '%s'""", (sex,))
+        result = cursor.fetchall()
+        if not result:
+            raise NotFoundError()
+        products = []
+        for result in result:
+            products.append({
+                "product_id": result[0],
+                "goods_name": result[1],
+                "image_link": result[2],
+                "sex": result[3],
+                "category": result[4],
+                "price": result[5]
+            })
+        
+        return products
+        
+    def search_category(self, category):
+        cursor.execute("""
+            SELECT * FROM product WHERE category = '%s'""", (category,))
+        result = cursor.fetchall()
+        if not result:
+            raise NotFoundError()
+        products = []
+        for result in result:
+            products.append({
+                "product_id": result[0],
+                "goods_name": result[1],
+                "image_link": result[2],
+                "sex": result[3],
+                "category": result[4],
+                "price": result[5]
+            })
+        
+        return products
+    
+    def search_name(self, name):
+        cursor.execute(f"""
+            SELECT * FROM product WHERE goods_name LIKE '%{name}%'""")
+        result = cursor.fetchall()
+        if not result:
+            raise NotFoundError()
+        products = []
+        for result in result:
+            products.append({
+                "product_id": result[0],
+                "goods_name": result[1],
+                "image_link": result[2],
+                "sex": result[3],
+                "category": result[4],
+                "price": result[5]
+            })
+        
+        return products
 
     def search(self): # split search and filter? or merge?
         raise NotImplementedError() # TODO: sangwon
@@ -314,8 +360,21 @@ class FE:
 
     @protected
     def search_result(self):
-        raise NotImplementedError() # TODO: sangwon
-        # merge of split search + filter?
+        choice = get_choice("Search Name", "Search Style", "Filter Category", "Filter Sex")
+        result = None
+        if choice == 1:
+            name = input('Search with name: ')
+            result = backend.search_name(name)
+        elif choice == 2:
+            # TODO
+            pass
+        elif choice == 3:
+            # TODO
+            pass
+        elif choice == 4:
+            # TODO
+            pass
+        self.push("home")
 
     @protected
     def product_info(self):
