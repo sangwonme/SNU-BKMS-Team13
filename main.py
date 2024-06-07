@@ -69,11 +69,10 @@ class BE:
         return {
             "user_id": result[0],
             "username": result[1],
-            "email": result[2],
-            "date_joined": result[4],
-            "sex": result[5],
-            "date_of_birth": result[6],
-            "account": result[7]
+            "sex": result[3],
+            "email": result[4],
+            "date_of_birth": result[5],
+            "user_account": result[6]
         }
 
     def sign_in(self, username, password):
@@ -86,17 +85,16 @@ class BE:
         return {
             "user_id": result[0],
             "username": result[1],
-            "email": result[2],
-            "date_joined": result[4],
-            "sex": result[5],
-            "date_of_birth": result[6],
-            "account": result[7]
+            "sex": result[3],
+            "email": result[4],
+            "date_of_birth": result[5],
+            "user_account": result[6]
         }
 
     def sign_up(self, username, email, password, sex, birthday):
         cursor.execute("""
-            insert into users (username, email, password, sex, account, date_of_birth)
-            values (%s, %s, %s, %s, 0, %s)
+            insert into users (username, email, password, sex, date_of_birth)
+            values (%s, %s, %s, %s, %s)
             returning user_id""", (username, email, password, sex, birthday))
         conn.commit()
         return cursor.fetchone()[0]
@@ -171,11 +169,13 @@ class BE:
             DELETE FROM products WHERE product_id = %s""", (product_id,))
         conn.commit() # TODO: minchan
 
-    def get_purchase_history(self):
-        raise NotImplementedError() # TODO: dookyung
+    def get_purchase_history(self, user_id):
+        cursor.execute("""select goods_name, price, quantity, purchase_date from purchase_history(%s);""", (user_id,))
+        return cursor.fetchall()
 
-    def get_search_history(self):
-        raise NotImplementedError() # TODO: dookyung
+    def get_search_history(self, user_id):
+        cursor.execute("""select search_query, search_date from search_history(%s);""", (user_id,))
+        return cursor.fetchall()
 
     # Fill free to add or mutate skeleton methods as needed, with various parameters
 
@@ -338,7 +338,7 @@ class FE:
         product_id = backend.register_product(goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity)
         print(f"New product registered with ID: {product_id}")
         self.push("home") # TODO: minchan
-    
+
     @protected
     def delete_product(self):
         product_id = int(input("Enter the product ID to delete: "))
@@ -355,10 +355,9 @@ class FE:
         print("-----------------------------------------------")
         print(f"username: {self.authorized_user['username']}")
         print(f"email: {self.authorized_user['email']}")
-        print(f"joined: {self.authorized_user['date_joined']}")
         print(f"gender: {self.authorized_user['sex']}")
         print(f"birthday: {self.authorized_user['date_of_birth']}")
-        print(f"account: {self.authorized_user['account']}")
+        print(f"account: {self.authorized_user['user_account']}")
         print("-----------------------------------------------")
         choice = get_choice("Purchase History", "Search History", "Charge Account", "Back")
         if choice == 1:
@@ -377,11 +376,25 @@ class FE:
 
     @protected
     def purchase_history(self):
-        raise NotImplementedError() # TODO: dookyung
+        print("Purchase History")
+        print("Product Name \t\t Price \t\t Quantity \t\t Purchase Date")
+        print("--------------------------------------------------------")
+        history = backend.get_purchase_history(self.userID())
+        for product_name, price, quantity, purchase_date in history:
+            print(f"{product_name} \t\t {price} \t\t {quantity} \t\t {purchase_date}")
+        print("--------------------------------------------------------")
+        self.push("mypage")
 
     @protected
     def search_history(self):
-        raise NotImplementedError() # TODO: dookyung
+        print("Search History")
+        print("Query \t\t Purchase Date")
+        print("--------------------------------------------------------")
+        history = backend.get_search_history(self.userID())
+        for query, search_date in history:
+            print(f"{query} \t\t {search_date}")
+        print("--------------------------------------------------------")
+        self.push("mypage")
 
     def userID(self):
         return self.authorized_user['user_id']

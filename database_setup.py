@@ -116,6 +116,46 @@ def create_tables():
         );
         """)
 
+        cursor.execute("""CREATE INDEX IF NOT EXISTS idx_search_searchlog ON searchlog(user_id);""")
+
+        cursor.execute("""CREATE INDEX IF NOT EXISTS idx_user_buylog ON buylog(user_id);""")
+
+        cursor.execute("""
+            CREATE OR REPLACE FUNCTION purchase_history(p_user_id INT)
+            RETURNS TABLE(
+                goods_name VARCHAR,
+                price DECIMAL,
+                quantity INT,
+                purchase_date TIMESTAMP
+            ) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT p.goods_name, p.price, b.quantity, b.purchase_date
+                FROM buylog b
+                JOIN product p ON b.product_id = p.product_id
+                WHERE b.user_id = p_user_id
+                ORDER BY b.purchase_date DESC;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+
+        cursor.execute("""
+
+            CREATE OR REPLACE FUNCTION search_history(p_user_id INT)
+            RETURNS TABLE(
+                search_query VARCHAR,
+                search_date TIMESTAMP
+            ) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT s.search_query, s.search_date
+                FROM searchlog s
+                WHERE s.user_id = p_user_id
+                ORDER BY s.search_date DESC;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+
         conn.commit()
         print("All tables created successfully.")
     except Exception as e:
@@ -267,6 +307,6 @@ if __name__ == "__main__":
     insert_user_data()
     insert_data_from_csv()
     insert_example_data()
-    
+
     cursor.close()
     conn.close()
