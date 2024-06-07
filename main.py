@@ -104,15 +104,9 @@ class BE:
             update users set account = account + %s where user_id = %s""", (amount, user_id))
         conn.commit()
 
-    def supplier_login(self):
-        raise NotImplementedError()
-
-    def search(self): # split search and filter? or merge?
-        raise NotImplementedError() # TODO: sangwon
-
-    def brand_info(self, seller_id):
+    def seller_login(self, seller_name, password):
         cursor.execute("""
-            SELECT * FROM sellers WHERE seller_id = %s""", (seller_id,))
+            select * from seller where seller_name = %s and password = %s""", (seller_name, password))
         result = cursor.fetchone()
         conn.commit()
         if not result:
@@ -120,18 +114,34 @@ class BE:
         return {
             "seller_id": result[0],
             "seller_name": result[1],
-            "contact_email": result[2],
-            "contact_phone": result[3],
-            "address": result[4],
-            "date_joined": result[5]
+            "contact_email": result[3],
+            "seller_account": result[4]
+        }
+
+    def search(self): # split search and filter? or merge?
+        raise NotImplementedError() # TODO: sangwon
+
+    def seller_info(self, seller_id):
+        cursor.execute("""
+            SELECT * FROM seller WHERE seller_id = %s""", (seller_id,))
+        result = cursor.fetchone()
+        conn.commit()
+        if not result:
+            raise NotFoundError()
+        return {
+            "seller_id": result[0],
+            "seller_name": result[1],
+            "contact_email": result[3],
+            "seller_account": result[4]
         } # TODO: minchan
 
     def purchase(self):
         raise NotImplementedError() # TODO: hobin
 
-    def product_info(self, product_id):
+    def product_info(self, product_id, seller_id):
         cursor.execute("""
-            SELECT * FROM products WHERE product_id = %s""", (product_id,))
+            SELECT * FROM product WHERE product_id = %s AND seller_id = %s""", 
+            (product_id, seller_id))
         result = cursor.fetchone()
         conn.commit()
         if not result:
@@ -139,39 +149,62 @@ class BE:
         return {
             "product_id": result[0],
             "goods_name": result[1],
-            "goods_link": result[2],
-            "image_link": result[3],
-            "sex": result[4],
-            "category": result[5],
-            "price": result[6],
-            "seller_id": result[7],
-            "stock_quantity": result[8],
-            "date_added": result[9]
+            "image_link": result[2],
+            "sex": result[3],
+            "category": result[4],
+            "price": result[5],
+            "seller_id": seller_id,  # Update to use self.authorized_seller['seller_id']
+            "stock_quantity": result[7],
+            "date_added": result[8]
         } # TODO: minchan
 
-    def register_product(self, goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity):
+    def register_product(self, goods_name, image_link, sex, category, price, seller_id, stock_quantity):
         cursor.execute("""
-            INSERT INTO products (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING product_id""", (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity))
+            INSERT INTO product (goods_name, image_link, sex, category, price, seller_id, stock_quantity)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING product_id""", 
+            (goods_name, image_link, sex, category, price, seller_id, stock_quantity))
         conn.commit()
         return cursor.fetchone()[0] # TODO: minchan
 
-    def update_product(self, product_id, goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity):
-        cursor.execute("""
-            UPDATE products
-            SET goods_name = %s, goods_link = %s, image_link = %s, sex = %s, category = %s, price = %s, seller_id = %s, stock_quantity = %s
-            WHERE product_id = %s""", (goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity, product_id))
-        conn.commit() # TODO: minchan
+    def update_product(self, product_id, field_name, new_value, seller_id):
+        try:
+            query = f"UPDATE product SET {field_name} = %s WHERE product_id = %s AND seller_id = %s"
+            cursor.execute(query, (new_value, product_id, seller_id))
+            if cursor.rowcount == 0:
+                raise NotFoundError("Product not found or unauthorized to update this product.")
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"An error occurred: {e}")
+            raise # TODO: minchan
 
-    def delete_product(self, product_id):
-        cursor.execute("""
-            DELETE FROM products WHERE product_id = %s""", (product_id,))
-        conn.commit() # TODO: minchan
+    def delete_product(self, product_id, seller_id):
+        try:
+            cursor.execute("""
+                DELETE FROM product WHERE product_id = %s AND seller_id = %s""", 
+                (product_id, seller_id))
+            if cursor.rowcount == 0:
+                raise NotFoundError()
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise # TODO: minchan
 
     def get_purchase_history(self, user_id):
         cursor.execute("""select goods_name, price, quantity, purchase_date from purchase_history(%s);""", (user_id,))
         return cursor.fetchall()
+
+    def get_sales_history(self, seller_id):
+        cursor.execute("""
+            SELECT p.product_id, p.goods_name, p.price, p.stock_quantity, u.user_id, u.username, b.quantity, b.purchase_date
+            FROM product p
+            JOIN buylog b ON p.product_id = b.product_id
+            JOIN users u ON b.user_id = u.user_id
+            WHERE p.seller_id = %s
+            ORDER BY b.purchase_date DESC;
+        """, (seller_id,))
+        return cursor.fetchall() # ADD: minchan
 
     def get_search_history(self, user_id):
         cursor.execute("""select search_query, search_date from search_history(%s);""", (user_id,))
@@ -188,6 +221,7 @@ class FE:
     state = "home"
     prev_state = "home"
     authorized_user = None
+    authorized_seller = None
 
     def run(self):
         while True:
@@ -202,16 +236,25 @@ class FE:
         def decorator(func):
             def wrapper(self, *args, **kwargs):
                 if protected:
-                    if not self.authorized_user:
+                    if not (self.authorized_user) and not (self.authorized_seller):
                         print("Not authenticated. Fallback to login page.")
                         self.unauthorized()
                         return
-                    try:
-                        self.authorized_user = backend.get_user(self.userID())
-                    except NotFoundError:
-                        print("User not found. Fallback to login page.")
-                        self.unauthorized()
-                        return
+                    if self.authorized_user:
+                        try:
+                            self.authorized_user = backend.get_user(self.userID())
+                        except NotFoundError:
+                            print("User not found. Fallback to login page.")
+                            self.unauthorized()
+                            return
+                    else:
+                        try:
+                            self.authorized_seller = backend.seller_info(self.sellerID())
+                        except NotFoundError:
+                            print("Seller not found. Fallback to login page.")
+                            self.unauthorized()
+                            return
+
                 try:
                     func(self, *args, **kwargs)
                 except NotImplementedError:
@@ -232,25 +275,36 @@ class FE:
 
     @public
     def unauthorized(self):
-        choice = get_choice("Customer Sign in", "Customer Sign up", "Supplier Login")
+        choice = get_choice("Customer Sign in", "Customer Sign up", "Seller Sign in")
         if choice == 1:
             self.push("signin")
         elif choice == 2:
             self.push("signup")
         elif choice == 3:
-            self.push("supplier_login")
+            self.push("seller_login")
 
     @protected
     def home(self):
-        print("Welcome back", self.authorized_user["username"])
-        choice = get_choice("Search", "My Page", "Logout")
-        if choice == 1:
-            self.push("search_result")
-        elif choice == 2:
-            self.push("mypage")
-        elif choice == 3:
-            self.authorized_user = None
-            self.push("home") # go back to login page
+        if self.authorized_user:
+            print("Welcome back", self.authorized_user["username"])
+            choice = get_choice("Search", "My Page", "Logout")
+            if choice == 1:
+                self.push("search_result")
+            elif choice == 2:
+                self.push("mypage")
+            elif choice == 3:
+                self.authorized_user = None
+                self.push("home") # go back to login page
+        else:
+            print("Welcome back", self.authorized_seller["seller_name"])
+            choice = get_choice("Product management", "Sales management", "Logout")
+            if choice == 1:
+                self.push("myproduct")
+            elif choice == 2:
+                self.push("sales_history")
+            elif choice == 3:
+                self.authorized_seller = None
+                self.push("home") # go back to login page
 
     @public
     def signin(self):
@@ -278,8 +332,11 @@ class FE:
         self.push("home")
 
     @public
-    def supplier_login(self):
-        raise NotImplementedError() # TODO: minchan? dookyung?
+    def seller_login(self):
+        name = input("Enter your sellername: ")
+        password = input("Enter your password: ")
+        self.authorized_seller = backend.seller_login(name, password)
+        self.push("home") # TODO: minchan
 
     @protected
     def search_result(self):
@@ -290,32 +347,29 @@ class FE:
     def product_info(self):
         product_id = int(input("Enter the product ID: "))
         try:
-            product = backend.product_info(product_id)
+            product = backend.product_info(product_id, self.sellerID())
             print(f"Product ID: {product['product_id']}")
             print(f"Product Name: {product['goods_name']}")
-            print(f"Product Link: {product['goods_link']}")
             print(f"Image Link: {product['image_link']}")
             print(f"Sex: {product['sex']}")
             print(f"Category: {product['category']}")
             print(f"Price: {product['price']}")
-            print(f"Seller ID: {product['seller_id']}")
+            print(f"Seller ID: {self.sellerID()}")
             print(f"Stock Quantity: {product['stock_quantity']}")
             print(f"Date Added: {product['date_added']}")
         except NotFoundError:
             print("Product not found.")
-        self.push("home") # TODO: minchan
+        self.push("myproduct") # TODO: minchan
 
     @protected
-    def brand_info(self):
+    def seller_info(self):
         seller_id = int(input("Enter the seller ID: "))
         try:
-            seller = backend.brand_info(seller_id)
+            seller = backend.seller_info(seller_id)
             print(f"Seller ID: {seller['seller_id']}")
             print(f"Seller Name: {seller['seller_name']}")
             print(f"Contact Email: {seller['contact_email']}")
-            print(f"Contact Phone: {seller['contact_phone']}")
-            print(f"Address: {seller['address']}")
-            print(f"Date Joined: {seller['date_joined']}")
+            print(f"Seller account: {seller['seller_account']}")
         except NotFoundError:
             print("Sellor not found.")
         self.push("home") # TODO: minchan
@@ -328,26 +382,51 @@ class FE:
     @protected
     def register_product(self):
         goods_name = input("Enter the product name: ")
-        goods_link = input("Enter the product link: ")
         image_link = input("Enter the image link: ")
         sex = get_choice("Male", "Female", "Unisex", msg="Enter the sex: ", get_label=True)
         category = input("Enter the category: ")
         price = float(input("Enter the price: "))
-        seller_id = int(input("Enter the seller ID: "))
         stock_quantity = int(input("Enter the stock quantity: "))
-        product_id = backend.register_product(goods_name, goods_link, image_link, sex, category, price, seller_id, stock_quantity)
+        product_id = backend.register_product(goods_name, image_link, sex, category, price, self.sellerID(), stock_quantity)
         print(f"New product registered with ID: {product_id}")
-        self.push("home") # TODO: minchan
+        self.push("myproduct") # TODO: minchan
+
+    @protected
+    def update_product(self):
+        product_id = input("Enter the product ID to update: ")
+
+        print("Which field would you like to update?")
+        field_to_update = get_choice("goods_name", "image_link", "sex", "category", "price", "stock_quantity", msg="Enter the field: ", get_label=True)
+
+        if field_to_update == "goods_name":
+            new_value = input("Enter the new product name: ")
+        elif field_to_update == "image_link":
+            new_value = input("Enter the new image link: ")
+        elif field_to_update == "sex":
+            new_value = get_choice("Male", "Female", "Unisex", msg="Enter the sex: ", get_label=True)
+        elif field_to_update == "category":
+            new_value = input("Enter the new category: ")
+        elif field_to_update == "price":
+            new_value = float(input("Enter the new price: "))
+        elif field_to_update == "stock_quantity":
+            new_value = int(input("Enter the new stock quantity: "))
+        else:
+            print("Invalid field selected.")
+            return
+
+        backend.update_product(product_id, field_to_update, new_value, self.sellerID())
+        print(f"Product with ID {product_id} has been updated.")
+        self.push("myproduct") # ADD: minchan
 
     @protected
     def delete_product(self):
         product_id = int(input("Enter the product ID to delete: "))
         try:
-            backend.delete_product(product_id)
+            backend.delete_product(product_id, self.sellerID())
             print("Product deleted successfully.")
         except NotFoundError:
             print("Product not found.")
-        self.push("home") # ADD: minchan
+        self.push("myproduct") # ADD: minchan
 
     @protected
     def mypage(self):
@@ -375,6 +454,21 @@ class FE:
             self.push("home")
 
     @protected
+    def myproduct(self):
+        print("Product managment")
+        choice = get_choice("Check product", "Add product", "Update product", "Delete product" ,"Back")
+        if choice == 1:
+            self.push("product_info")
+        elif choice == 2:
+            self.push("register_product")
+        elif choice == 3:
+            self.push("update_product")
+        elif choice == 4:
+            self.push("delete_product")
+        elif choice == 5:
+            self.push("home") # ADD: minchan
+
+    @protected
     def purchase_history(self):
         print("Purchase History")
         print("Product Name \t\t Price \t\t Quantity \t\t Purchase Date")
@@ -396,8 +490,26 @@ class FE:
         print("--------------------------------------------------------")
         self.push("mypage")
 
+    @protected
+    def sales_history(self):
+        sales_history = backend.get_sales_history(self.sellerID())
+        if sales_history:
+            print("Sales History")
+            print("Purchase Date | Product ID | Product Name | Price | Stock Quantity | User ID | Username | Quantity ")
+            print("-------------------------------------------------------------------------------------------------------")
+            for row in sales_history:
+                product_id, goods_name, price, stock_quantity, user_id, username, quantity, purchase_date = row
+                print(f"{purchase_date} | {product_id} | {goods_name} | {price} | {stock_quantity} | {user_id} | {username} | {quantity}")
+            print("-------------------------------------------------------------------------------------------------------")
+        else:
+            print("No sales history found.")
+        self.push("home") # ADD: minchan
+
     def userID(self):
         return self.authorized_user['user_id']
+
+    def sellerID(self):
+        return self.authorized_seller['seller_id'] # ADD: minchan
 
     # Fill free to add or mutate skeleton methods as needed, with various parameters
 

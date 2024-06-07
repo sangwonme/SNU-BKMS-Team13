@@ -69,6 +69,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS seller (
             seller_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             seller_name VARCHAR(100) NOT NULL,
+            password VARCHAR(255) NOT NULL,
             contact_email VARCHAR(100) NOT NULL UNIQUE,
             seller_account DECIMAL(10, 2) DEFAULT 0
         );
@@ -166,22 +167,23 @@ def create_tables():
 def insert_seller_data():
     try:
         sellers = [
-            ('Nike', 'contact@nike.com'),
-            ('Adidas', 'contact@adidas.com'),
-            ('Zara', 'contact@zara.com'),
-            ('H&M', 'contact@hm.com'),
-            ('Uniqlo', 'contact@uniqlo.com'),
-            ('Gap', 'contact@gap.com'),
-            ('Levis', 'contact@levis.com'),
-            ('Gucci', 'contact@gucci.com'),
-            ('Prada', 'contact@prada.com'),
-            ('Chanel', 'contact@chanel.com')
+            ('Nike', 'NikeKey123', 'contact@nike.com'),
+            ('Adidas', 'AdidasSecure456', 'contact@adidas.com'),
+            ('Zara', 'ZaraPass789', 'contact@zara.com'),
+            ('H&M', 'HMPass321', 'contact@hm.com'),
+            ('Uniqlo', 'UniqloKey654', 'contact@uniqlo.com'),
+            ('Gap', 'GapAccess987', 'contact@gap.com'),
+            ('Levis', 'LevisLock147', 'contact@levis.com'),
+            ('Gucci', 'GucciSecure258', 'contact@gucci.com'),
+            ('Prada', 'PradaSafe369', 'contact@prada.com'),
+            ('Chanel', 'ChanelKey741', 'contact@chanel.com')
+
         ]
-        for seller_name, contact_email in sellers:
+        for seller_name, password, contact_email in sellers:
             cursor.execute("""
-            INSERT INTO seller (seller_name, contact_email)
-            VALUES (%s, %s)
-            """, (seller_name, contact_email))
+            INSERT INTO seller (seller_name, password, contact_email)
+            VALUES (%s, %s, %s)
+            """, (seller_name, password,contact_email))
             # ON CONFLICT (contact_email, seller_account) DO NOTHING;
         conn.commit()
         print("Seller data inserted successfully.")
