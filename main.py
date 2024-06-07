@@ -68,12 +68,12 @@ class BE:
             raise NotFoundError()
         return {
             "user_id": result[0],
-            "username": result[0],
-            "sex": result[2],
-            "email": result[3],
-            # "date_joined": result[4],
-            "date_of_birth": result[4],
-            # "account": result[7]
+            "username": result[1],
+            "email": result[2],
+            "date_joined": result[4],
+            "sex": result[5],
+            "date_of_birth": result[6],
+            "account": result[7]
         }
 
     def sign_in(self, username, password):
@@ -85,12 +85,12 @@ class BE:
             raise NotFoundError()
         return {
             "user_id": result[0],
-            # "username": result[1],
-            "sex": result[2],
-            "email": result[3],
-            # "date_joined": result[4],
-            "date_of_birth": result[4],
-            # "account": result[7]
+            "username": result[1],
+            "email": result[2],
+            "date_joined": result[4],
+            "sex": result[5],
+            "date_of_birth": result[6],
+            "account": result[7]
         }
 
     def sign_up(self, username, email, password, sex, birthday):
@@ -109,31 +109,8 @@ class BE:
     def supplier_login(self):
         raise NotImplementedError()
 
-    def search_nl(self, nl_query):
-        # TODO: get vectors with current goods name -> combine with vector df
-
-        # TODO: cos sim
-
-        # update search log / search result
-
-        pass
-
-    def search_filter(self, filter_attr, filter_value):
-        # user add filters to search
-
-        pass
-
-
-
     def search(self): # split search and filter? or merge?
-        # TODO: get vectors with current goods name -> combine with vector df
-
-        # TODO: 
-
-
-
-        pass
-        # raise NotImplementedError() # TODO: sangwon
+        raise NotImplementedError() # TODO: sangwon
 
     def brand_info(self, seller_id):
         cursor.execute("""
@@ -416,3 +393,4 @@ if __name__ == "__main__":
     print(f"BKMS1-Team13 Project:{PROJECT_NAME}")
     fe = FE()
     fe.run()
+
