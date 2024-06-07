@@ -44,8 +44,8 @@ print("RawData Loading...")
 raw_df = pd.read_csv('./data/itemDB.csv')
 raw_df['vector'] = raw_df['vector'].apply(lambda x: np.array(list(map(float, x.replace('[', '').replace(']','').replace(' ','').split(',')))))
 image_embeddings = np.stack(raw_df['vector'].values)
+categories = raw_df['category'].unique().tolist()
 print("RawData Loaded!", f"({round(time.time()-start_time, 2)}s.)")
-
 # --------------------- UTILS -----------------------------#
 # load fashion-clip model
 start_time = time.time()
@@ -131,7 +131,7 @@ class BE:
 
     def search_sex(self, sex): # split search and filter? or merge?
         cursor.execute("""
-            SELECT * FROM product WHERE sex = '%s'""", (sex,))
+            SELECT * FROM product WHERE sex = %s""", (sex,))
         result = cursor.fetchall()
         if not result:
             raise NotFoundError()
@@ -150,7 +150,7 @@ class BE:
         
     def search_category(self, category):
         cursor.execute("""
-            SELECT * FROM product WHERE category = '%s'""", (category,))
+            SELECT * FROM product WHERE category = %s""", (category,))
         result = cursor.fetchall()
         if not result:
             raise NotFoundError()
@@ -361,19 +361,32 @@ class FE:
     @protected
     def search_result(self):
         choice = get_choice("Search Name", "Search Style", "Filter Category", "Filter Sex")
-        result = None
+        top_k = None
+        while type(top_k) != int:
+            top_k = int(input('How many products do you want to find? (1~10): '))
         if choice == 1:
             name = input('Search with name: ')
-            result = backend.search_name(name)
+            products = backend.search_name(name)
         elif choice == 2:
-            # TODO
-            pass
+            nl = input('Search with style you want (Natural Language supported): ')
+            products = backend.search_nl('a photo of' + nl, top_k)
         elif choice == 3:
-            # TODO
-            pass
+            categories = ['반소매', '니트/스웨터', '셔츠/블라우스', '트레이닝/조거', '캡/야구', '데님', '카디건', '코튼', '피케/카라', '나일론/코치', '슈트', '슈트/블레이저', '백팩', '토트백', '후드', '패션스니커즈화']
+            sub_choice = get_choice('반소매', '니트/스웨터', '셔츠/블라우스', '트레이닝/조거', '캡/야구', '데님', '카디건', '코튼', '피케/카라', '나일론/코치', '슈트', '슈트/블레이저', '백팩', '토트백', '후드', '패션스니커즈화')
+            products = backend.search_category(categories[sub_choice])
         elif choice == 4:
-            # TODO
-            pass
+            sub_choice = get_choice('Male', 'Female')
+            sex = 'Male' if sub_choice==1 else 'Female'
+            products = backend.search_sex(sex)
+        # show result
+        products = products[:top_k]
+        for product in products:
+            print("-----------------------------------------------")
+            print(f"Product Name: {product['goods_name']}")
+            print(f"Sex: {product['sex']}")
+            print(f"Category: {product['category']}")
+            print(f"Price: {product['price']}")    
+        print("-----------------------------------------------")
         self.push("home")
 
     @protected
