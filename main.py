@@ -125,9 +125,23 @@ class BE:
         dot_product_single = np.dot(image_embeddings, text_embeddings.T)
         # get top_k
         indecies = np.flip(dot_product_single.argsort(0)[-top_k:]).flatten().tolist()
-        # TODO: update searchlog
+        goods_name = raw_df.loc[indecies, 'goods_name']
+        products = []
+        for gn in goods_name:
+            cursor.execute(f"""
+                SELECT * FROM product WHERE goods_name = '{gn}'""")
+            result = cursor.fetchone()
+            products.append({
+                "product_id": result[0],
+                "goods_name": result[1],
+                "image_link": result[2],
+                "sex": result[3],
+                "category": result[4],
+                "price": result[5]
+            })
+        # TODO: update searchlog 
 
-        return raw_df.loc['goods_name', indecies]
+        return products
 
     def search_sex(self, sex): # split search and filter? or merge?
         cursor.execute("""
@@ -383,6 +397,7 @@ class FE:
         for product in products:
             print("-----------------------------------------------")
             print(f"Product Name: {product['goods_name']}")
+            print(f"Image: {product['image_link']}")
             print(f"Sex: {product['sex']}")
             print(f"Category: {product['category']}")
             print(f"Price: {product['price']}")    
