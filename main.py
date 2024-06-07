@@ -1,4 +1,5 @@
 import os
+import time
 import traceback
 import psycopg2
 import pandas as pd
@@ -6,12 +7,15 @@ import numpy as np
 from psycopg2 import sql
 from dotenv import load_dotenv
 from fashion_clip.fashion_clip import FashionCLIP
+from test_fashionclip import indecies
 
 #--------------------- CONSTANTS --------------------------#
 
 PROJECT_NAME = "MUSINSA CLONE BACKEND"
 
 #--------------------- DB CONNECTION ----------------------#
+start_time = time.time()
+print("DB Connecting...")
 load_dotenv()
 
 db_name = os.getenv('PG_DBNAME')
@@ -29,21 +33,28 @@ conn = psycopg2.connect(
 )
 
 cursor = conn.cursor()
-
+print("DB Connected!", f"({round(time.time()-start_time, 2)}s.)")
 # --------------------- EXCPETIONS ------------------------#
 class NotFoundError(Exception):
     pass
 
 # --------------------- RAW DATA --------------------------#
-# load raw data
+# load raw data as datframe (this works only for the NL search feature)
+start_time = time.time()
+print("RawData Loading...")
 raw_df = pd.read_csv('./data/itemDB.csv')
-# convert str formatted vector -> np.array
 raw_df['vector'] = raw_df['vector'].apply(lambda x: np.array(list(map(float, x.replace('[', '').replace(']','').replace(' ','').split(',')))))
-
+image_embeddings = np.stack(raw_df['vector'].values)
+print("RawData Loaded!", f"({round(time.time()-start_time, 2)}s.)")
 
 # --------------------- UTILS -----------------------------#
 # load fashion-clip model
+start_time = time.time()
+print("FashionCLIP Loading...")
 fclip = FashionCLIP('fashion-clip')
+print("FashionCLIP Loaded!", f"({round(time.time()-start_time, 2)}s.)")
+
+
 
 def get_choice(*args, msg="", get_label=False):
     print(f"{msg if msg else 'Please choose an option'}")
@@ -56,6 +67,7 @@ def get_choice(*args, msg="", get_label=False):
         else:
             return args[c - 1] if get_label else c
 
+print('==============================================================================')
 # --------------------- BACKEND ----------------------------#
 
 class BE:
@@ -108,15 +120,23 @@ class BE:
 
     def supplier_login(self):
         raise NotImplementedError()
-    
-    # TODO
-    def search_nl(self, search_keyword):
-        
-        pass
 
-    # TODO
+    def search_nl(self, search_keyword, top_k):
+        # search_keyword embedding
+        search_keyword = [search_keyword]
+        text_embeddings = fclip.encode_text(search_keyword, batch_size=32)
+        text_embeddings = text_embeddings/np.linalg.norm(text_embeddings, ord=2, axis=-1, keepdims=True)
+        # Cos Sim
+        dot_product_single = np.dot(image_embeddings, text_embeddings.T)
+        # get top_k
+        indecies = np.flip(dot_product_single.argsort(0)[-top_k:]).flatten().tolist()
+        # update searchlog
+        return raw_df.loc['goods_name', indecies]
+
     def search_filter(self, filter_attr, filter_value): # split search and filter? or merge?
-        
+        # TODO: Find w/ filter
+
+        # TODO: update searchlog
         pass
 
 
