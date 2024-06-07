@@ -61,7 +61,7 @@ def create_tables():
             sex sex_type NOT NULL,
             email VARCHAR(100) NOT NULL UNIQUE,
             date_of_birth DATE,
-            user_account VARCHAR(100) NOT NULL UNIQUE
+            user_account INT DEFAULT 10000
         );
         """)
 
@@ -70,7 +70,7 @@ def create_tables():
             seller_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             seller_name VARCHAR(100) NOT NULL,
             contact_email VARCHAR(100) NOT NULL UNIQUE,
-            seller_account VARCHAR(100) NOT NULL UNIQUE
+            seller_account INT DEFAULT 0
         );
         """)
 
@@ -126,22 +126,22 @@ def create_tables():
 def insert_seller_data():
     try:
         sellers = [
-            ('Nike', 'contact@nike.com', '1234-5678'),
-            ('Adidas', 'contact@adidas.com', '2345-6789'),
-            ('Zara', 'contact@zara.com', '3456-7890'),
-            ('H&M', 'contact@hm.com', '4567-8901'),
-            ('Uniqlo', 'contact@uniqlo.com', '5678-9012'),
-            ('Gap', 'contact@gap.com', '6789-0123'),
-            ('Levis', 'contact@levis.com', '7890-1234'),
-            ('Gucci', 'contact@gucci.com', '8901-2345'),
-            ('Prada', 'contact@prada.com', '9012-3456'),
-            ('Chanel', 'contact@chanel.com', '0123-4567')
+            ('Nike', 'contact@nike.com'),
+            ('Adidas', 'contact@adidas.com'),
+            ('Zara', 'contact@zara.com'),
+            ('H&M', 'contact@hm.com'),
+            ('Uniqlo', 'contact@uniqlo.com'),
+            ('Gap', 'contact@gap.com'),
+            ('Levis', 'contact@levis.com'),
+            ('Gucci', 'contact@gucci.com'),
+            ('Prada', 'contact@prada.com'),
+            ('Chanel', 'contact@chanel.com')
         ]
-        for seller_name, contact_email, seller_account in sellers:
+        for seller_name, contact_email in sellers:
             cursor.execute("""
-            INSERT INTO seller (seller_name, contact_email, seller_account)
-            VALUES (%s, %s, %s)
-            """, (seller_name, contact_email, seller_account))
+            INSERT INTO seller (seller_name, contact_email)
+            VALUES (%s, %s)
+            """, (seller_name, contact_email))
             # ON CONFLICT (contact_email, seller_account) DO NOTHING;
         conn.commit()
         print("Seller data inserted successfully.")
@@ -153,23 +153,23 @@ def insert_seller_data():
 def insert_user_data():
     try:
         users = [
-            ('johndoe1', 'password123', 'Male', 'john1@example.com', '1990-01-01', '0001-1111'),
-            ('janedoe2', 'password456', 'Female', 'jane2@example.com', '1992-02-02', '0002-2222'),
-            ('jacksmith3', 'password789', 'Male', 'jack3@example.com', '1988-03-03', '0003-3333'),
-            ('emilyjones4', 'password012', 'Female', 'emily4@example.com', '1995-04-04', '0004-4444'),
-            ('michaeljohnson5', 'password345', 'Male', 'michael5@example.com', '1985-05-05', '0005-5555'),
-            ('sarahbrown6', 'password678', 'Female', 'sarah6@example.com', '1991-06-06', '0006-6666'),
-            ('davidwilliams7', 'password901', 'Male', 'david7@example.com', '1993-07-07', '0007-7777'),
-            ('amandamiller8', 'password234', 'Female', 'amanda8@example.com', '1989-08-08', '0008-8888'),
-            ('robertmoore9', 'password567', 'Male', 'robert9@example.com', '1994-09-09', '0009-9999'),
-            ('lisataylor10', 'password890', 'Female', 'lisa10@example.com', '1987-10-10', '0010-1010')
+            ('johndoe1', 'password123', 'Male', 'john1@example.com', '1990-01-01'),
+            ('janedoe2', 'password456', 'Female', 'jane2@example.com', '1992-02-02'),
+            ('jacksmith3', 'password789', 'Male', 'jack3@example.com', '1988-03-03'),
+            ('emilyjones4', 'password012', 'Female', 'emily4@example.com', '1995-04-04'),
+            ('michaeljohnson5', 'password345', 'Male', 'michael5@example.com', '1985-05-05'),
+            ('sarahbrown6', 'password678', 'Female', 'sarah6@example.com', '1991-06-06'),
+            ('davidwilliams7', 'password901', 'Male', 'david7@example.com', '1993-07-07'),
+            ('amandamiller8', 'password234', 'Female', 'amanda8@example.com', '1989-08-08'),
+            ('robertmoore9', 'password567', 'Male', 'robert9@example.com', '1994-09-09'),
+            ('lisataylor10', 'password890', 'Female', 'lisa10@example.com', '1987-10-10')
         ]
-        for username, password, sex, email, date_of_birth, user_account in users:
+        for username, password, sex, email, date_of_birth in users:
             cursor.execute("""
-            INSERT INTO users (username, password, sex, email, date_of_birth, user_account)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """, (username, password, sex, email, date_of_birth, user_account))
-            # ON CONFLICT (username, email, user_account) DO NOTHING;
+            INSERT INTO users (username, password, sex, email, date_of_birth)
+            VALUES (%s, %s, %s, %s, %s)
+            """, (username, password, sex, email, date_of_birth))
+            # ON CONFLICT (username, email) DO NOTHING;
         conn.commit()
         print("User data inserted successfully.")
     except Exception as e:
