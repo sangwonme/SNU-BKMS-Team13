@@ -12,7 +12,7 @@ This table will store information about the users of the application.
 | sex              | ENUM('Male', 'Female', 'Other') | NOT NULL |
 | email            | VARCHAR(100) | NOT NULL, UNIQUE        |
 | date_of_birth    | DATE         | NULL                    |
-| user_account     | INT          | DEFAULT 10000           |
+| user_account     | DECIMAL(10, 2) | DEFAULT 10000           |
 
 #### Product Table
 This table will store information about the products.
@@ -37,7 +37,7 @@ This table will store information about the sellers.
 | seller_id        | INT          | PRIMARY KEY, AUTO_INCREMENT |
 | seller_name      | VARCHAR(100) | NOT NULL                |
 | contact_email    | VARCHAR(100) | NOT NULL, UNIQUE        |
-| seller_account   | INT          | DEFAULT 0               |
+| seller_account   | DECIMAL(10, 2)          | DEFAULT 0               |
 
 #### SearchLog Table
 This table will store the search logs of users.
