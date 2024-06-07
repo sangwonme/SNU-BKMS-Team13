@@ -32,6 +32,14 @@ except Exception as e:
 
 def create_tables():
     try:
+        # Drop tables if they exist
+        cursor.execute("DROP TABLE IF EXISTS searchresult CASCADE;")
+        cursor.execute("DROP TABLE IF EXISTS searchlog CASCADE;")
+        cursor.execute("DROP TABLE IF EXISTS buylog CASCADE;")
+        cursor.execute("DROP TABLE IF EXISTS product CASCADE;")
+        cursor.execute("DROP TABLE IF EXISTS users CASCADE;")
+        cursor.execute("DROP TABLE IF EXISTS seller CASCADE;")
+
         cursor.execute("""
         DO $$
         BEGIN
@@ -52,7 +60,8 @@ def create_tables():
             password VARCHAR(255) NOT NULL,
             sex sex_type NOT NULL,
             email VARCHAR(100) NOT NULL UNIQUE,
-            date_of_birth DATE
+            date_of_birth DATE,
+            user_account INT DEFAULT 10000
         );
         """)
 
@@ -60,7 +69,8 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS seller (
             seller_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             seller_name VARCHAR(100) NOT NULL,
-            contact_email VARCHAR(100) NOT NULL UNIQUE
+            contact_email VARCHAR(100) NOT NULL UNIQUE,
+            seller_account INT DEFAULT 0
         );
         """)
 
@@ -131,8 +141,8 @@ def insert_seller_data():
             cursor.execute("""
             INSERT INTO seller (seller_name, contact_email)
             VALUES (%s, %s)
-            ON CONFLICT (contact_email) DO NOTHING;
             """, (seller_name, contact_email))
+            # ON CONFLICT (contact_email, seller_account) DO NOTHING;
         conn.commit()
         print("Seller data inserted successfully.")
     except Exception as e:
@@ -158,8 +168,8 @@ def insert_user_data():
             cursor.execute("""
             INSERT INTO users (username, password, sex, email, date_of_birth)
             VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (username) DO NOTHING;
             """, (username, password, sex, email, date_of_birth))
+            # ON CONFLICT (username, email) DO NOTHING;
         conn.commit()
         print("User data inserted successfully.")
     except Exception as e:
