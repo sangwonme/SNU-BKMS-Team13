@@ -108,6 +108,17 @@ class BE:
 
     def supplier_login(self):
         raise NotImplementedError()
+    
+    # TODO
+    def search_nl(self, search_keyword):
+        
+        pass
+
+    # TODO
+    def search_filter(self, filter_attr, filter_value): # split search and filter? or merge?
+        
+        pass
+
 
     def search(self): # split search and filter? or merge?
         raise NotImplementedError() # TODO: sangwon
