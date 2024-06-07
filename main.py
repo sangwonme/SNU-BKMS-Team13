@@ -242,12 +242,14 @@ class FE:
     @protected
     def home(self):
         print("Welcome back", self.authorized_user["username"])
-        choice = get_choice("Search", "My Page", "Logout")
+        choice = get_choice("Search", "My Page", "Purchase", "Logout")
         if choice == 1:
             self.push("search_result")
         elif choice == 2:
             self.push("mypage")
         elif choice == 3:
+            self.push("purchase")
+        elif choice == 4:
             self.authorized_user = None
             self.push("home") # go back to login page
 
@@ -295,8 +297,21 @@ class FE:
 
     @protected
     def purchase(self):
-        raise NotImplementedError() # TODO: hobin
-        # 별도의 route가 필요한가?
+        try:
+            product_id = int(input("Enter product ID to purchase: "))
+            quantity = int(input("Enter quantity to purchase: "))
+            user_id = self.userID()
+            backend.purchase(user_id, product_id, quantity)
+            print("Purchase successful!")
+        except (NotFoundError, InsufficientStockError, InsufficientFundsError) as e:
+            print(f"Purchase failed: {e}")
+        except ValueError:
+            print("Invalid input. Please enter valid product ID and quantity.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            traceback.print_exc()
+        finally:
+            self.push("home")
 
     @protected
     def register_product(self):
