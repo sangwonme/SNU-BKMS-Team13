@@ -387,12 +387,10 @@ class BE:
             raise
 
     def get_purchase_history(self, user_id):
-        # TODO: dookyung
-        cursor.execute("""select goods_name, price, quantity, purchase_date from purchase_history(%s);""", (user_id,))
+        cursor.execute("""SELECT goods_name, price, quantity, purchase_date FROM purchase_history WHERE user_id = %s ORDER BY purchase_date DESC;""", (user_id,))
         return cursor.fetchall()
 
     def get_sales_history(self, seller_id):
-        # TODO: minchan
         cursor.execute("""
             SELECT p.product_id, p.goods_name, p.price, p.stock_quantity, u.user_id, u.username, b.quantity, b.purchase_date
             FROM product p
@@ -404,7 +402,7 @@ class BE:
         return cursor.fetchall() # ADD: minchan
 
     def get_search_history(self, user_id):
-        cursor.execute("""select search_query, search_date from search_history(%s);""", (user_id,))
+        cursor.execute("""SELECT search_query, search_date FROM user_search_history WHERE user_id = %s ORDER BY search_date DESC;""", (user_id,))
         return cursor.fetchall()
 
     # Fill free to add or mutate skeleton methods as needed, with various parameters
