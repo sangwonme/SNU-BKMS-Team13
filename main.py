@@ -64,6 +64,15 @@ def get_choice(*args, msg="", get_label=False):
         else:
             return args[c - 1] if get_label else c
 
+def get_numchoice():
+    top_k = None
+    while type(top_k) != int:
+        try:
+            top_k = int(input('How many products do you want to find? (1~10): '))
+        except:
+            print('You should type a number.')
+    return top_k
+
 print('==============================================================================')
 # --------------------- BACKEND ----------------------------#
 
@@ -116,10 +125,29 @@ class BE:
     def supplier_login(self):
         raise NotImplementedError()
 
-    def search_nl(self, search_keyword, top_k):
+    def add_searchlog(self, user_id, search_query):
+        cursor.execute("""
+            INSERT INTO searchlog (user_id, search_query)
+            VALUES (%s, %s)
+            RETURNING searchlog_id
+        """, (user_id, search_query))
+        conn.commit()
+        return cursor.fetchone()[0]
+    
+    def add_searchresult(self, searchlog_id, product_id, rank):
+        cursor.execute("""
+            INSERT INTO searchresult (searchlog_id, product_id, rank)
+            VALUES (%s, %s, %s)
+            RETURNING result_id
+        """, (searchlog_id, product_id, rank))
+        conn.commit()
+        return cursor.fetchone()[0]
+
+
+    def search_nl(self, search_keyword, top_k, user_id):
         # search_keyword embedding
-        search_keyword = [search_keyword]
-        text_embeddings = fclip.encode_text(search_keyword, batch_size=32)
+        text = ['a photo of ' + search_keyword]
+        text_embeddings = fclip.encode_text(text, batch_size=32)
         text_embeddings = text_embeddings/np.linalg.norm(text_embeddings, ord=2, axis=-1, keepdims=True)
         # Cos Sim
         dot_product_single = np.dot(image_embeddings, text_embeddings.T)
@@ -139,11 +167,17 @@ class BE:
                 "category": result[4],
                 "price": result[5]
             })
-        # TODO: update searchlog 
+        # update searchlog 
+        rank = 1
+        for product in products:
+            searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Search Style: {search_keyword}")
+            product_id = product['product_id']
+            self.add_searchresult(searchlog_id, product_id, rank)
+            rank += 1
 
         return products
 
-    def search_sex(self, sex): # split search and filter? or merge?
+    def search_sex(self, sex, top_k, user_id): # split search and filter? or merge?
         cursor.execute("""
             SELECT * FROM product WHERE sex = %s""", (sex,))
         result = cursor.fetchall()
@@ -159,10 +193,17 @@ class BE:
                 "category": result[4],
                 "price": result[5]
             })
-        
+        # update searchlog
+        rank = 1
+        for product in products[:top_k]:
+            searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Filter Sex: {sex}")
+            product_id = product['product_id']
+            self.add_searchresult(searchlog_id, product_id, rank)
+            rank += 1
+
         return products
         
-    def search_category(self, category):
+    def search_category(self, category, top_k, user_id):
         cursor.execute("""
             SELECT * FROM product WHERE category = %s""", (category,))
         result = cursor.fetchall()
@@ -178,10 +219,17 @@ class BE:
                 "category": result[4],
                 "price": result[5]
             })
-        
+        # update searchlog
+        rank = 1
+        for product in products[:top_k]:
+            searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Filter Category: {category}")
+            product_id = product['product_id']
+            self.add_searchresult(searchlog_id, product_id, rank)
+            rank += 1
+
         return products
     
-    def search_name(self, name):
+    def search_name(self, name, top_k, user_id):
         cursor.execute(f"""
             SELECT * FROM product WHERE goods_name LIKE '%{name}%'""")
         result = cursor.fetchall()
@@ -197,7 +245,13 @@ class BE:
                 "category": result[4],
                 "price": result[5]
             })
-        
+        # update searchlog
+        rank = 1
+        for product in products[:top_k]:
+            searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Search name: {name}")
+            product_id = product['product_id']
+            self.add_searchresult(searchlog_id, product_id, rank)
+            rank += 1     
         return products
 
     def search(self): # split search and filter? or merge?
@@ -375,23 +429,25 @@ class FE:
     @protected
     def search_result(self):
         choice = get_choice("Search Name", "Search Style", "Filter Category", "Filter Sex")
-        top_k = None
-        while type(top_k) != int:
-            top_k = int(input('How many products do you want to find? (1~10): '))
+        user_id = self.authorized_user['user_id']
         if choice == 1:
             name = input('Search with name: ')
-            products = backend.search_name(name)
+            top_k = get_numchoice()
+            products = backend.search_name(name, top_k, user_id)
         elif choice == 2:
             nl = input('Search with style you want (Natural Language supported): ')
-            products = backend.search_nl('a photo of' + nl, top_k)
+            top_k = get_numchoice()
+            products = backend.search_nl(nl, top_k, user_id)
         elif choice == 3:
             categories = ['반소매', '니트/스웨터', '셔츠/블라우스', '트레이닝/조거', '캡/야구', '데님', '카디건', '코튼', '피케/카라', '나일론/코치', '슈트', '슈트/블레이저', '백팩', '토트백', '후드', '패션스니커즈화']
             sub_choice = get_choice('반소매', '니트/스웨터', '셔츠/블라우스', '트레이닝/조거', '캡/야구', '데님', '카디건', '코튼', '피케/카라', '나일론/코치', '슈트', '슈트/블레이저', '백팩', '토트백', '후드', '패션스니커즈화')
-            products = backend.search_category(categories[sub_choice])
+            top_k = get_numchoice()
+            products = backend.search_category(categories[sub_choice], top_k, user_id)
         elif choice == 4:
             sub_choice = get_choice('Male', 'Female')
             sex = 'Male' if sub_choice==1 else 'Female'
-            products = backend.search_sex(sex)
+            top_k = get_numchoice()
+            products = backend.search_sex(sex, top_k, user_id)
         # show result
         products = products[:top_k]
         for product in products:
