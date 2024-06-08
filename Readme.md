@@ -79,7 +79,11 @@ PG_PASSWORD=1234
 PG_PORT=5432
 PG_HOST=localhost
 ```
-4. 실행:
+
+4. 데이터베이스 세팅:
+`python3 database_setup.py`
+
+5. 실행:
 `python3 main.py`
 
 # Notes
