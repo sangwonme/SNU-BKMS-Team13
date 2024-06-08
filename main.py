@@ -119,7 +119,7 @@ class BE:
 
     def charge_account(self, user_id, amount):
         cursor.execute("""
-            update users set account = account + %s where user_id = %s""", (amount, user_id))
+            update users set user_account = user_account + %s where user_id = %s""", (amount, user_id))
         conn.commit()
 
     def seller_login(self, seller_name, password):
@@ -285,7 +285,7 @@ class BE:
     def purchase(self, user_id, product_id, quantity):
         try:
             cursor.execute("""
-                SELECT p.stock_quantity, p.price, p.seller_id, u.account
+                SELECT p.stock_quantity, p.price, p.seller_id, u.user_account
                 FROM product p
                 JOIN users u ON u.user_id = %s
                 WHERE p.product_id = %s
@@ -296,17 +296,19 @@ class BE:
 
             stock_quantity, price, seller_id, user_account = result
             if stock_quantity < quantity:
-                raise InsufficientStockError("Not enough stock available")
+                # raise InsufficientStockError("Not enough stock available")
+                pass
 
             total_price = price * quantity
             if user_account < total_price:
-                raise InsufficientFundsError("Insufficient funds in user account")
+                # raise InsufficientFundsError("Insufficient funds in user account")
+                pass
 
             cursor.execute("BEGIN")
 
             try:
-                cursor.execute("UPDATE users SET account = account - %s WHERE user_id = %s", (total_price, user_id))
-                cursor.execute("UPDATE seller SET account = account + %s WHERE seller_id = %s", (total_price, seller_id))
+                cursor.execute("UPDATE users SET user_account = user_account - %s WHERE user_id = %s", (total_price, user_id))
+                cursor.execute("UPDATE seller SET user_account = user_account + %s WHERE seller_id = %s", (total_price, seller_id))
                 cursor.execute("UPDATE product SET stock_quantity = stock_quantity - %s WHERE product_id = %s", (quantity, product_id))
                 cursor.execute("""
                     INSERT INTO buylog (user_id, product_id, quantity)
