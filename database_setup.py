@@ -122,18 +122,39 @@ def create_tables():
         cursor.execute("""CREATE INDEX IF NOT EXISTS idx_user_buylog ON buylog(user_id);""")
 
         cursor.execute("""
-        CREATE OR REPLACE VIEW purchase_history AS
-            SELECT b.user_id, p.goods_name, p.price, b.quantity, b.purchase_date
-            FROM buylog b
-            JOIN product p ON b.product_id = p.product_id
-            ORDER BY b.user_id, b.purchase_date DESC;
+            CREATE OR REPLACE FUNCTION purchase_history(p_user_id INT)
+            RETURNS TABLE(
+                goods_name VARCHAR,
+                price DECIMAL,
+                quantity INT,
+                purchase_date TIMESTAMP
+            ) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT p.goods_name, p.price, b.quantity, b.purchase_date
+                FROM buylog b
+                JOIN product p ON b.product_id = p.product_id
+                WHERE b.user_id = p_user_id
+                ORDER BY b.purchase_date DESC;
+            END;
+            $$ LANGUAGE plpgsql;
         """)
 
         cursor.execute("""
-        CREATE OR REPLACE VIEW user_search_history AS
-            SELECT user_id, search_query, search_date
-            FROM searchlog
-            ORDER BY user_id, search_date DESC;
+
+            CREATE OR REPLACE FUNCTION search_history(p_user_id INT)
+            RETURNS TABLE(
+                search_query VARCHAR,
+                search_date TIMESTAMP
+            ) AS $$
+            BEGIN
+                RETURN QUERY
+                SELECT s.search_query, s.search_date
+                FROM searchlog s
+                WHERE s.user_id = p_user_id
+                ORDER BY s.search_date DESC;
+            END;
+            $$ LANGUAGE plpgsql;
         """)
 
         conn.commit()
