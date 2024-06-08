@@ -150,7 +150,7 @@ class BE:
         """, (user_id, search_query))
         conn.commit()
         return cursor.fetchone()[0]
-    
+
     def add_searchresult(self, searchlog_id, product_id, rank):
         cursor.execute("""
             INSERT INTO searchresult (searchlog_id, product_id, rank)
@@ -184,7 +184,7 @@ class BE:
                 "category": result[4],
                 "price": result[5]
             })
-        # update searchlog 
+        # update searchlog
         rank = 1
         for product in products:
             searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Search Style: {search_keyword}")
@@ -219,7 +219,7 @@ class BE:
             rank += 1
 
         return products
-        
+
     def search_category(self, category, top_k, user_id):
         cursor.execute("""
             SELECT * FROM product WHERE category = %s""", (category,))
@@ -245,7 +245,7 @@ class BE:
             rank += 1
 
         return products
-    
+
     def search_name(self, name, top_k, user_id):
         cursor.execute(f"""
             SELECT * FROM product WHERE goods_name LIKE '%{name}%'""")
@@ -268,11 +268,11 @@ class BE:
             searchlog_id = self.add_searchlog(user_id=user_id, search_query=f"Search name: {name}")
             product_id = product['product_id']
             self.add_searchresult(searchlog_id, product_id, rank)
-            rank += 1     
+            rank += 1
         return products
 
     def search(self): # split search and filter? or merge?
-        raise NotImplementedError() 
+        raise NotImplementedError()
 
     def seller_info(self, seller_id):
         cursor.execute("""
@@ -286,7 +286,7 @@ class BE:
             "seller_name": result[1],
             "contact_email": result[3],
             "seller_account": result[4]
-        } 
+        }
 
     def purchase(self, user_id, product_id, quantity):
         try:
@@ -309,7 +309,7 @@ class BE:
             if user_account < total_price:
                 # raise InsufficientFundsError("Insufficient funds in user account")
                 pass
-            
+
             cursor.execute("BEGIN")
 
             try:
@@ -324,7 +324,7 @@ class BE:
                     WHERE u.user_id = %s
                 """, (quantity, product_id, user_id))
                 cursor.execute("COMMIT")
-                
+
             except Exception as e:
                 cursor.execute("ROLLBACK")
                 raise e
@@ -335,7 +335,7 @@ class BE:
 
     def product_info(self, product_id, seller_id):
         cursor.execute("""
-            SELECT * FROM product WHERE product_id = %s AND seller_id = %s""", 
+            SELECT * FROM product WHERE product_id = %s AND seller_id = %s""",
             (product_id, seller_id))
         result = cursor.fetchone()
         conn.commit()
@@ -351,16 +351,16 @@ class BE:
             "seller_id": seller_id,  # Update to use self.authorized_seller['seller_id']
             "stock_quantity": result[7],
             "date_added": result[8]
-        } 
+        }
 
     def register_product(self, goods_name, image_link, sex, category, price, seller_id, stock_quantity):
         cursor.execute("""
             INSERT INTO product (goods_name, image_link, sex, category, price, seller_id, stock_quantity)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING product_id""", 
+            RETURNING product_id""",
             (goods_name, image_link, sex, category, price, seller_id, stock_quantity))
         conn.commit()
-        return cursor.fetchone()[0] 
+        return cursor.fetchone()[0]
 
     def update_product(self, product_id, field_name, new_value, seller_id):
         try:
@@ -377,14 +377,14 @@ class BE:
     def delete_product(self, product_id, seller_id):
         try:
             cursor.execute("""
-                DELETE FROM product WHERE product_id = %s AND seller_id = %s""", 
+                DELETE FROM product WHERE product_id = %s AND seller_id = %s""",
                 (product_id, seller_id))
             if cursor.rowcount == 0:
                 raise NotFoundError()
             conn.commit()
         except Exception as e:
             conn.rollback()
-            raise 
+            raise
 
     def get_purchase_history(self, user_id):
         # TODO: dookyung
@@ -535,7 +535,7 @@ class FE:
         name = input("Enter your sellername: ")
         password = input("Enter your password: ")
         self.authorized_seller = backend.seller_login(name, password)
-        self.push("home") 
+        self.push("home")
 
     @protected
     def search_result(self):
@@ -568,7 +568,7 @@ class FE:
             print(f"Image: {product['image_link']}")
             print(f"Sex: {product['sex']}")
             print(f"Category: {product['category']}")
-            print(f"Price: {product['price']}")    
+            print(f"Price: {product['price']}")
         print("-----------------------------------------------")
         self.push("home")
 
@@ -588,7 +588,7 @@ class FE:
             print(f"Date Added: {product['date_added']}")
         except NotFoundError:
             print("Product not found.")
-        self.push("myproduct") 
+        self.push("myproduct")
 
     @protected
     def seller_info(self):
@@ -601,7 +601,7 @@ class FE:
             print(f"Seller account: {seller['seller_account']}")
         except NotFoundError:
             print("Sellor not found.")
-        self.push("home") 
+        self.push("home")
 
     @protected
     def purchase(self):
@@ -631,7 +631,7 @@ class FE:
         stock_quantity = int(input("Enter the stock quantity: "))
         product_id = backend.register_product(goods_name, image_link, sex, category, price, self.sellerID(), stock_quantity)
         print(f"New product registered with ID: {product_id}")
-        self.push("myproduct") 
+        self.push("myproduct")
 
     @protected
     def update_product(self):
