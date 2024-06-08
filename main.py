@@ -135,8 +135,48 @@ class BE:
             "seller_account": result[4]
         } # TODO: minchan
 
-    def purchase(self):
-        raise NotImplementedError() # TODO: hobin
+    def purchase(self, user_id, product_id, quantity):
+        try:
+            cursor.execute("""
+                SELECT p.stock_quantity, p.price, p.seller_id, u.account
+                FROM product p
+                JOIN users u ON u.user_id = %s
+                WHERE p.product_id = %s
+            """, (user_id, product_id))
+            result = cursor.fetchone()
+            if not result:
+                raise NotFoundError("Product or User not found")
+
+            stock_quantity, price, seller_id, user_account = result
+            if stock_quantity < quantity:
+                raise InsufficientStockError("Not enough stock available")
+
+            total_price = price * quantity
+            if user_account < total_price:
+                raise InsufficientFundsError("Insufficient funds in user account")
+
+            cursor.execute("BEGIN")
+
+            try:
+                cursor.execute("UPDATE users SET account = account - %s WHERE user_id = %s", (total_price, user_id))
+                cursor.execute("UPDATE seller SET account = account + %s WHERE seller_id = %s", (total_price, seller_id))
+                cursor.execute("UPDATE product SET stock_quantity = stock_quantity - %s WHERE product_id = %s", (quantity, product_id))
+                cursor.execute("""
+                    INSERT INTO buylog (user_id, product_id, quantity)
+                    SELECT u.user_id, p.product_id, %s
+                    FROM users u
+                    INNER JOIN product p ON p.product_id = %s
+                    WHERE u.user_id = %s
+                """, (quantity, product_id, user_id))
+                cursor.execute("COMMIT")
+                
+            except Exception as e:
+                cursor.execute("ROLLBACK")
+                raise e
+
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(f"Error during purchase: {error}")
+            raise error
 
     def product_info(self, product_id, seller_id):
         cursor.execute("""
@@ -376,8 +416,21 @@ class FE:
 
     @protected
     def purchase(self):
-        raise NotImplementedError() # TODO: hobin
-        # 별도의 route가 필요한가?
+        try:
+            product_id = int(input("Enter product ID to purchase: "))
+            quantity = int(input("Enter quantity to purchase: "))
+            user_id = self.userID()
+            backend.purchase(user_id, product_id, quantity)
+            print("Purchase successful!")
+        except (NotFoundError, InsufficientStockError, InsufficientFundsError) as e:
+            print(f"Purchase failed: {e}")
+        except ValueError:
+            print("Invalid input. Please enter valid product ID and quantity.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            traceback.print_exc()
+        finally:
+            self.push("home")
 
     @protected
     def register_product(self):
@@ -518,4 +571,3 @@ if __name__ == "__main__":
     print(f"BKMS1-Team13 Project:{PROJECT_NAME}")
     fe = FE()
     fe.run()
-
