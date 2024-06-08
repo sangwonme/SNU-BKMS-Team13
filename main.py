@@ -37,6 +37,12 @@ print("DB Connected!", f"({round(time.time()-start_time, 2)}s.)")
 class NotFoundError(Exception):
     pass
 
+class InsufficientStockError(Exception):
+    pass
+
+class InsufficientFundsError(Exception):
+    pass
+
 # --------------------- RAW DATA --------------------------#
 # load raw data as datframe (this works only for the NL search feature)
 start_time = time.time()
@@ -476,12 +482,14 @@ class FE:
     def home(self):
         if self.authorized_user:
             print("Welcome back", self.authorized_user["username"])
-            choice = get_choice("Search", "My Page", "Logout")
+            choice = get_choice("Search", "My Page", "Purchase", "Logout")
             if choice == 1:
                 self.push("search_result")
             elif choice == 2:
                 self.push("mypage")
-            elif choice == 3:
+            elif purchase == 3:
+                self.push("purchase")
+            elif choice == 4:
                 self.authorized_user = None
                 self.push("home") # go back to login page
         else:
