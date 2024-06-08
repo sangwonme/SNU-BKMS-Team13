@@ -272,7 +272,7 @@ class BE:
         return products
 
     def search(self): # split search and filter? or merge?
-        raise NotImplementedError() # TODO: sangwon
+        raise NotImplementedError() 
 
     def seller_info(self, seller_id):
         cursor.execute("""
@@ -286,7 +286,7 @@ class BE:
             "seller_name": result[1],
             "contact_email": result[3],
             "seller_account": result[4]
-        } # TODO: minchan
+        } 
 
     def purchase(self, user_id, product_id, quantity):
         try:
@@ -309,12 +309,12 @@ class BE:
             if user_account < total_price:
                 # raise InsufficientFundsError("Insufficient funds in user account")
                 pass
-
+            
             cursor.execute("BEGIN")
 
             try:
                 cursor.execute("UPDATE users SET user_account = user_account - %s WHERE user_id = %s", (total_price, user_id))
-                cursor.execute("UPDATE seller SET user_account = user_account + %s WHERE seller_id = %s", (total_price, seller_id))
+                cursor.execute("UPDATE seller SET seller_account = seller_account + %s WHERE seller_id = %s", (total_price, seller_id))
                 cursor.execute("UPDATE product SET stock_quantity = stock_quantity - %s WHERE product_id = %s", (quantity, product_id))
                 cursor.execute("""
                     INSERT INTO buylog (user_id, product_id, quantity)
@@ -351,7 +351,7 @@ class BE:
             "seller_id": seller_id,  # Update to use self.authorized_seller['seller_id']
             "stock_quantity": result[7],
             "date_added": result[8]
-        } # TODO: minchan
+        } 
 
     def register_product(self, goods_name, image_link, sex, category, price, seller_id, stock_quantity):
         cursor.execute("""
@@ -360,7 +360,7 @@ class BE:
             RETURNING product_id""", 
             (goods_name, image_link, sex, category, price, seller_id, stock_quantity))
         conn.commit()
-        return cursor.fetchone()[0] # TODO: minchan
+        return cursor.fetchone()[0] 
 
     def update_product(self, product_id, field_name, new_value, seller_id):
         try:
@@ -372,7 +372,7 @@ class BE:
         except Exception as e:
             conn.rollback()
             print(f"An error occurred: {e}")
-            raise # TODO: minchan
+            raise
 
     def delete_product(self, product_id, seller_id):
         try:
@@ -384,13 +384,15 @@ class BE:
             conn.commit()
         except Exception as e:
             conn.rollback()
-            raise # TODO: minchan
+            raise 
 
     def get_purchase_history(self, user_id):
+        # TODO: dookyung
         cursor.execute("""select goods_name, price, quantity, purchase_date from purchase_history(%s);""", (user_id,))
         return cursor.fetchall()
 
     def get_sales_history(self, seller_id):
+        # TODO: minchan
         cursor.execute("""
             SELECT p.product_id, p.goods_name, p.price, p.stock_quantity, u.user_id, u.username, b.quantity, b.purchase_date
             FROM product p
@@ -487,7 +489,7 @@ class FE:
                 self.push("search_result")
             elif choice == 2:
                 self.push("mypage")
-            elif purchase == 3:
+            elif choice == 3:
                 self.push("purchase")
             elif choice == 4:
                 self.authorized_user = None
@@ -533,10 +535,11 @@ class FE:
         name = input("Enter your sellername: ")
         password = input("Enter your password: ")
         self.authorized_seller = backend.seller_login(name, password)
-        self.push("home") # TODO: minchan
+        self.push("home") 
 
     @protected
     def search_result(self):
+        # TODO: sangwon - multiple search + purchase
         choice = get_choice("Search Name", "Search Style", "Filter Category", "Filter Sex")
         user_id = self.authorized_user['user_id']
         if choice == 1:
@@ -585,7 +588,7 @@ class FE:
             print(f"Date Added: {product['date_added']}")
         except NotFoundError:
             print("Product not found.")
-        self.push("myproduct") # TODO: minchan
+        self.push("myproduct") 
 
     @protected
     def seller_info(self):
@@ -598,7 +601,7 @@ class FE:
             print(f"Seller account: {seller['seller_account']}")
         except NotFoundError:
             print("Sellor not found.")
-        self.push("home") # TODO: minchan
+        self.push("home") 
 
     @protected
     def purchase(self):
@@ -628,7 +631,7 @@ class FE:
         stock_quantity = int(input("Enter the stock quantity: "))
         product_id = backend.register_product(goods_name, image_link, sex, category, price, self.sellerID(), stock_quantity)
         print(f"New product registered with ID: {product_id}")
-        self.push("myproduct") # TODO: minchan
+        self.push("myproduct") 
 
     @protected
     def update_product(self):
