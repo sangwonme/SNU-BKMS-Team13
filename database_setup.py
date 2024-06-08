@@ -195,6 +195,7 @@ def insert_seller_data():
 def insert_user_data():
     try:
         users = [
+            ('admin', '123', 'Male', 'admin@example.com', '1990-01-01'),
             ('johndoe1', 'password123', 'Male', 'john1@example.com', '1990-01-01'),
             ('janedoe2', 'password456', 'Female', 'jane2@example.com', '1992-02-02'),
             ('jacksmith3', 'password789', 'Male', 'jack3@example.com', '1988-03-03'),
