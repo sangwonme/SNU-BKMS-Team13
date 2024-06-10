@@ -136,6 +136,15 @@ def create_tables():
             ORDER BY user_id, search_date DESC;
         """)
 
+        cursor.execute("""
+        CREATE OR REPLACE VIEW sales_history AS
+            SELECT b.user_id, u.username, p.product_id, p.goods_name, p.price, p.stock_quantity, b.quantity, b.purchase_date
+            FROM buylog b
+            JOIN product p ON b.product_id = p.product_id
+            JOIN users u ON b.user_id = u.user_id
+            ORDER BY b.user_id, b.purchase_date DESC;
+        """)
+
         conn.commit()
         print("All tables created successfully.")
     except Exception as e:
