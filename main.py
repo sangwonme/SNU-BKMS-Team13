@@ -392,12 +392,15 @@ class BE:
 
     def get_sales_history(self, seller_id):
         cursor.execute("""
-            SELECT p.product_id, p.goods_name, p.price, p.stock_quantity, u.user_id, u.username, b.quantity, b.purchase_date
-            FROM product p
-            JOIN buylog b ON p.product_id = b.product_id
-            JOIN users u ON b.user_id = u.user_id
-            WHERE p.seller_id = %s
-            ORDER BY b.purchase_date DESC;
+            SELECT ph.user_id, ph.username, ph.product_id, ph.goods_name, ph.price, ph.stock_quantity, ph.quantity, 
+                TO_CHAR(ph.purchase_date, 'YYYY-MM-DD HH24:MI') AS purchase_date
+            FROM sales_history ph
+            WHERE ph.product_id IN (
+                SELECT product_id 
+                FROM product 
+                WHERE seller_id = %s
+            )
+            ORDER BY ph.purchase_date DESC;
         """, (seller_id,))
         return cursor.fetchall() # ADD: minchan
 
@@ -732,6 +735,11 @@ class FE:
 
     @protected
     def sales_history(self):
+        print("-----------------------------------------------")
+        print(f"username: {self.authorized_seller['seller_name']}")
+        print(f"account: {self.authorized_seller['seller_account']}")
+        print("-----------------------------------------------")
+
         sales_history = backend.get_sales_history(self.sellerID())
         if sales_history:
             print("Sales History")
