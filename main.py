@@ -70,6 +70,17 @@ def get_choice(*args, msg="", get_label=False):
         else:
             return args[c - 1] if get_label else c
 
+def get_choice_list(options, msg="", get_label=False):
+    print(f"{msg if msg else 'Please choose an option'}")
+    for i, arg in enumerate(options):
+        print(f"{i+1}. {arg}")
+    while True:
+        c = int(input(f"Enter your choice (1-{len(options)}): "))
+        if c not in range(1, len(options)+1):
+            print(f"Invalid choice. Please enter a number between 1 and {len(options)}.")
+        else:
+            return options[c - 1] if get_label else c
+
 def get_numchoice():
     top_k = None
     while type(top_k) != int:
@@ -270,9 +281,6 @@ class BE:
             self.add_searchresult(searchlog_id, product_id, rank)
             rank += 1
         return products
-
-    def search(self): # split search and filter? or merge?
-        raise NotImplementedError()
 
     def seller_info(self, seller_id):
         cursor.execute("""
@@ -540,7 +548,7 @@ class FE:
 
     @protected
     def search_result(self):
-        # TODO: sangwon - multiple search + purchase
+        # TODO: sangwon - search + purchase
         choice = get_choice("Search Name", "Search Style", "Filter Category", "Filter Sex")
         user_id = self.authorized_user['user_id']
         if choice == 1:
@@ -557,8 +565,8 @@ class FE:
             top_k = get_numchoice()
             products = backend.search_category(categories[sub_choice], top_k, user_id)
         elif choice == 4:
-            sub_choice = get_choice('Male', 'Female')
-            sex = 'Male' if sub_choice==1 else 'Female'
+            sub_choice = get_choice('Male', 'Female', 'Unisex')
+            sex = 'Male' if sub_choice==1 else 'Female' if sub_choice==2 else 'Unisex'
             top_k = get_numchoice()
             products = backend.search_sex(sex, top_k, user_id)
         # show result
@@ -571,6 +579,22 @@ class FE:
             print(f"Category: {product['category']}")
             print(f"Price: {product['price']}")
         print("-----------------------------------------------")
+        # purchase
+        choice = get_choice_list([products[i]['goods_name'] for i in range(len(products))]+['Nothing'], msg="Do you want buy something?")
+        if choice <= len(products):
+            try:
+                quantity = int(input("Enter quantity to purchase: "))
+                user_id = self.userID()
+                product_id = products[choice-1]['product_id']
+                backend.purchase(user_id, product_id, quantity)
+                print("Purchase successful!")
+            except (NotFoundError, InsufficientStockError, InsufficientFundsError) as e:
+                print(f"Purchase failed: {e}")
+            except ValueError:
+                print("Invalid input. Please enter valid product ID and quantity.")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                traceback.print_exc()
         self.push("home")
 
     @protected
