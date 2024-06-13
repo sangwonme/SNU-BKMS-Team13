@@ -797,7 +797,6 @@ class FE:
             print("구매일자 | 품목 ID | 품목명 | 가격 | 잔여 수량 || 유저 ID | 유저이름 | 수량 ")
             print("-------------------------------------------------------------------------------------------------------")
             for row in sales_history:
-                print(row)
                 product_id, goods_name, price, stock_quantity, user_id, username, quantity, purchase_date = row
                 print(f"{purchase_date} | {product_id} | {goods_name} | {price} | {stock_quantity} || {user_id} | {username} | {quantity}")
             print("-------------------------------------------------------------------------------------------------------")
