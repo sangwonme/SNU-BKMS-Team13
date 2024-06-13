@@ -64,9 +64,9 @@ CREATE TABLE buylog (
 
 # Prequisites
 
-1. `python-dotenv`, `psycopg2-binary`, `pandas`, `numpy`, `fashion-clip` 라이브러리 설치
+1. `python-dotenv`, `psycopg2-binary`, `pandas`, `numpy`, `fashion-clip`, `colorama` 라이브러리 설치
 ```
-pip install python-dotenv psycopg2-binary pandas numpy fashion-clip
+pip install python-dotenv psycopg2-binary pandas numpy fashion-clip colorama
 ```
 2. (`itemDB.csv`)[https://drive.google.com/file/d/14zRKiRThvreP6502w6pl2XUXBywJsRV9/view?usp=sharing] 다운 받아서 `./data/itemDB.csv`에 파일 두기
 
